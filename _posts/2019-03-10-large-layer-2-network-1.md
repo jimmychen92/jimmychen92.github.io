@@ -21,7 +21,7 @@ However, legacy network architecture is not able to support that new business re
 ## Legacy Network Architecture
 In legacy network architecture, it has a bunch of mature technology to make sure one packet being delivered to another. 
 
-![image](/_assets/NetworkArchitecture.png) 
+![image](/assets/NetworkArchitecture.png) 
 
 L2 switches handles LAN(Local Area Network) or VLAN(Virtual Lan) network.L2 switch forwards packets to the right port by looking up the MAC table which matches the destination mac address. If no matching mac address, L2 switch would broadcast packet to all ports. In real network world, usually there are redundant network path for network L2. One obvious problem is that if every switches broadcast packets when failing to look up its mac table, there would be circles, which can bring down whole network. STP (Spanning Tree Protocol) is created to solve this problem to eliminate cycles in a network. 
 
