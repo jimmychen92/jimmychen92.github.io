@@ -6,15 +6,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Large layer 2 network (1) : why we need large layer 2 network</title>
-    <meta name="description" content="  New era of IT infrastructure  Legacy Network Architecture  Problems of legacy network  SummaryAs entering into cloud networking area, I’ve seen a lot of ta...">
+    <title>Large layer 2 network (2) : How to create large layer 2 network</title>
+    <meta name="description" content="  Network device virtualization  Layer 2 routing protocol  Overlay  SummaryIn the previous blog, we’ve seen that legacy L2 network is not fit for the modern ...">
 
     <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://at.alicdn.com/t/font_8v3czwksspqlg14i.css">
     <link rel="stylesheet" href="/css/main.css ">
-    <link rel="canonical" href="http://localhost:4000/2019/03/10/large-layer-2-network-1/">
+    <link rel="canonical" href="http://localhost:4000/2019/08/01/large-layer-2-network-2/">
     <link rel="alternate" type="application/rss+xml" title="LittleMing" href="http://localhost:4000/feed.xml ">
 
 
@@ -96,11 +96,11 @@
 
         <div class="page clearfix" post>
     <div class="left">
-        <h1>Large layer 2 network (1) : why we need large layer 2 network</h1>
+        <h1>Large layer 2 network (2) : How to create large layer 2 network</h1>
         <div class="label">
 
             <div class="label-card">
-                <i class="fa fa-calendar"></i>2019-03-10
+                <i class="fa fa-calendar"></i>2019-08-01
             </div>
 
             <div class="label-card">
@@ -153,41 +153,39 @@
         <hr>
         <article itemscope itemtype="http://schema.org/BlogPosting">
         <ul id="markdown-toc">
-  <li><a href="#new-era-of-it-infrastructure" id="markdown-toc-new-era-of-it-infrastructure">New era of IT infrastructure</a></li>
-  <li><a href="#legacy-network-architecture" id="markdown-toc-legacy-network-architecture">Legacy Network Architecture</a></li>
-  <li><a href="#problems-of-legacy-network" id="markdown-toc-problems-of-legacy-network">Problems of legacy network</a></li>
+  <li><a href="#network-device-virtualization" id="markdown-toc-network-device-virtualization">Network device virtualization</a></li>
+  <li><a href="#layer-2-routing-protocol" id="markdown-toc-layer-2-routing-protocol">Layer 2 routing protocol</a></li>
+  <li><a href="#overlay" id="markdown-toc-overlay">Overlay</a></li>
   <li><a href="#summary" id="markdown-toc-summary">Summary</a></li>
 </ul>
 
-<p>As entering into cloud networking area, I’ve seen a lot of talking about large layer 2 (L2) network. To me, it’s one of key technology that applied in modern datacenter, meeting the fast growing cloud service needs. So I decide to post a series of blogs to present what’s the idea of large L2 network and how the datacenter architecture move to there. In this first post, I am gonna talking about why the world need a large L2 network.</p>
+<p>In the previous blog, we’ve seen that legacy L2 network is not fit for the modern datacenter requirement. Lots of organizations came up with the different solutions  to address this problem. In overall, all solutions can be put into three different categories. In this post, I will go through major ideas about how to build up a large 2 network.</p>
 
-<h2 id="new-era-of-it-infrastructure">New era of IT infrastructure</h2>
-<p>If you are working at technology industry, you must be aware of  those public cloud companies, like Amazon AWS, Microsoft Azure, etc. In the beginning, these public cloud companies provide IAAS (Infrastructure as Service) to let other companies rent their Virtual Machines. To achieve that, public cloud companies use all kind of virtualization technology (compute/storage/network virtualization) to make one physical sever can run several VMs.</p>
+<p>One key reason that makes L2 network cannot scale is STP. Since in most network architecture, there are redundant network topology to improve the network reliability. However, in a redundant topology, there would be cycles. L2 network is not smart as L3 network. There is no routing on L2 switches, and switches forward packets based on the mac table. If the switch sees a unknown mac address, it will broadcast the packet to all the ports. If we don’t do anything for L2 network, these broadcast could eat up all the network bandwidth.  And L2 packet doesn’t have ttl, that makes packet loop through the L2 network forever. To solve that problem, we introduced the STP protocol, which blocks the redundant ports to prevent the packet dead loop. Since STP can be very expensive, usually it only runs efficiently in a small size network nodes. Here is the VLAN coming into the picture, which helps limit the STP scope.  So how to optimized STP or even prevent using STP would be the pain point to build large L2 network.</p>
 
-<p>This new business introduced new requirements for the network. Some basic requirements are BYOA (Bring Your Own Address) and live migration. The customers want to assign ip address to their VM, so it’s easy for them to manage their infrastructure. Also to improve availability, cloud provider must support live migrate their VM, as no network connection being interrupted, and customers don’t even notice their VM get migrated.</p>
+<h2 id="network-device-virtualization">Network device virtualization</h2>
+<p>STP solves the problem of breaking the network loop in the redundant L2 network. If we remove the redundant devices, then we don’t need the STP. Network device virtualization is using this idea to solve this problem. It will put multiple redundant device together and unite it as one device. This technology combining with link aggregation would make network topology as a tree structure which never generates a cycle.</p>
 
-<p>However, legacy network architecture is not able to support that new business requirement. To understand why legacy can’t make it, we have to first understand the legacy data center network architecture.</p>
+<p>The famous solution using this idea is CISCO VSS, Huawei CSS, etc. Customers need to purchase these device and manage L2 devices, and also need to buy maintain service from these vendor companies. Limited to the number of devices that this solution can manage, it usually can support up to 10k - 20k severs. It’s feasible that using this solution to manage small and mid size datacenter.</p>
 
-<h2 id="legacy-network-architecture">Legacy Network Architecture</h2>
-<p>In legacy network architecture, it has a bunch of mature technology to make sure one packet being delivered to another.</p>
+<h2 id="layer-2-routing-protocol">Layer 2 routing protocol</h2>
+<p>Another idea to realize big layer 2 problem is to introduce routing in the layer 2. In layer 3, it doesn’t need a STP to break down the network loop, because every node in layer 3 know the overall network topology and always make the best forwarding decision. However in layer 2 network, all nodes only know their neighbor, and have to broadcast the packet when seeing unknown destination. In the early generation of network technology, layer 2 switch device is expensive and we only want layer 2 network device doing the simple work .</p>
 
-<p><img src="/assets/NetworkArchitecture.png" alt="image" /></p>
+<p>One of famous layer 2 routing protocol is TRILL(Transparent Interconnection of Lots of Links), which is created by Radia Perlman who came up with STP and IS-IS. With no surprise, TRILL borrow the idea of IS-IS, each node deployed with TRILL will compute the shortest distance to the rest of nodes using SPF (Shortest Path First). It supports ECMP as well when there are multiple equal distance path. With the knowledge of full topology, TRILL can prevent cycle in the network.</p>
 
-<p>L2 switches handles LAN(Local Area Network) or VLAN(Virtual Lan) network.L2 switch forwards packets to the right port by looking up the MAC table which matches the destination mac address. If no matching mac address, L2 switch would broadcast packet to all ports. In real network world, usually there are redundant network path for network L2. One obvious problem is that if every switches broadcast packets when failing to look up its mac table, there would be circles, which can bring down whole network. STP (Spanning Tree Protocol) is created to solve this problem to eliminate cycles in a network.</p>
+<p>Since TRILL can easily solve the traditional layer 2 problem, currently companies like CISCO, Huawei,  Broadcom, Juniper support it.</p>
 
-<p>If we thinking about a L2 network as small town, the locations within the town can be reached via the local road. However, people must take the highway to reach the another town or even another state. We can thinking about these highway as L3 network to handle cross LAN/VLAN traffic. L3 routers is like the interstate fork in the highway. Each router has a routing table showing what’s the next hop should the packet go like what the sign does in the highway. The way that whole network build the routing table is called L3 routing. The routing protocols include BGP, OSPF, IS-IS etc.</p>
+<p><img src="/assets/DeviceVirtual.png" alt="image" /></p>
 
-<h2 id="problems-of-legacy-network">Problems of legacy network</h2>
-<p>Like we said, L2 network handles LAN network (like local roads in a town) and L3 network handles cross-lan/vlan traffic (like highways). This network architecture works perfectly for traditional network scenarios, like a company or school network. But for public cloud provider companies, it’s not capable of handling a few key scenarios. One important is VM live migration, which requires VM keeping all connections alive during migrating to anther physical sever, which can be anyware in the datacenter.</p>
+<h2 id="overlay">Overlay</h2>
+<p>The previous two solutions are hardware solutions which replying on buying the supported devices. However, in the modern datacenter, Overlay technology is becoming more and more popular and being deployed in the large datacenters. Overlay means encapsulate packets with another header, which is also called tunnel. The most famous encapsulation protocols are VXLAN (MAC in UDP) and NVGRE (MAC in GRE). The packets will be encapsulated when entering the tunnel and decapsulated after leaving the tunnel.</p>
 
-<p>Think about in real life, when you move to another place within the same state, you life won’t be change too much. Because you still have all records in the government, like your ID, tax, insurance, etc. But if you move to another country, that won’t be same situation. You are gonna set up everything all over again. In traditional data center, VM moves  to another VLAN is like move to different country. It must have a new ip address and update the mac address. As we know, we can’t keep the existing connection alive when the mac and ip address get updated.</p>
+<p>This solution can be deployed based on the current network device and technology. It’s easy to scale and completely support large layer 2 network. The architecture of the Overlay network is like a giant layer 2 switch connecting to all network nodes. As a replacement of VLAN id, VXLAN has 24 bit VLAN ID and NVGRE has 24 NVGRE ID, which can support  16M virtual networks.</p>
 
-<p>So modern cloud datacenter needs to have a way to manage large volume of ip and mac address to ensure VMs being removed free as much as possible. However VLAN + STP can’t manage a large network more than 1k nodes. Like we mentioned before, one of L2 network is that circular forwarding in the switches. To prevent broadcast not eating too much network bandwidth, VLAN can’t manage too many nodes.</p>
-
-<p>In real cloud datacenter, it requires at least 10k nodes in L2 to meet various cloud network scenarios. That’s why we called a large L2 network.</p>
+<p><img src="/assets/Overlay.png" alt="image" /></p>
 
 <h2 id="summary">Summary</h2>
-<p>The legacy network architecture, VLAN+STP manages L2 network. VLAN limits the broadcast scope and STP breaks circular forwarding path within VLAN.VLAN can only mange less than 1k nodes, however in cloud world, it requires to have &gt; 10k nodes L2 network, to meet VM live migration needs. And this is why we need large L2 network.  In the next post, I will talk about what’s the solutions to build the large L2 network.</p>
+<p>In this blog,  we talk about three solutions to solve the large layer 2 problem. Network device virtualization can be used in a small datacenter. Traditional network device companies come up with layer 2 routing solution to scale the layer 2 company, and software companies use overlay solutions based on existed network architecture. Genetically overlay solution supports the scale and flexible Layer 2 network, and nowadays it’s majorly used in large global datacenters.</p>
 
         </article>
         <hr>
@@ -203,7 +201,7 @@
                         <ul>
                         
                         <li class="relatedPost">
-                            <a href="/2019/08/01/large-layer-2-network-2/">Large layer 2 network (2) : How to create large layer 2 network
+                            <a href="/2019/03/10/large-layer-2-network-1/">Large layer 2 network (1) : why we need large layer 2 network
                             
                             </a>
                         </li>
@@ -228,11 +226,11 @@
         <div class="post-recent">
     <div class="pre">
         
+        <p><strong>上一篇</strong> <a href="/2019/03/10/large-layer-2-network-1/">Large layer 2 network (1) : why we need large layer 2 network</a></p>
+        
     </div>
     <div class="nex">
 
-        
-        <p><strong>下一篇</strong> <a href="/2019/08/01/large-layer-2-network-2/">Large layer 2 network (2) : How to create large layer 2 network</a></p>
         
     </div>
 </div>
@@ -250,8 +248,8 @@
      */
 
     var disqus_config = function() {
-        this.page.url = 'http://localhost:4000/2019/03/10/large-layer-2-network-1/'; // Replace PAGE_URL with your page's canonical URL variable
-        this.page.identifier = 'http://localhost:4000/2019/03/10/large-layer-2-network-1/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+        this.page.url = 'http://localhost:4000/2019/08/01/large-layer-2-network-2/'; // Replace PAGE_URL with your page's canonical URL variable
+        this.page.identifier = 'http://localhost:4000/2019/08/01/large-layer-2-network-2/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
     };
 
     (function() { // DON'T EDIT BELOW THIS LINE
